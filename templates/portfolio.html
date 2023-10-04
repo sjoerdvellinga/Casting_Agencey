@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Actors Portfolio</title>
+    <title>Casting Agency</title>
 </head>
 <body>
     <div id="header">
-        <h1>The Agency App</h1>
+        <h1>The Casting Agency</h1>
+        <h2>Actors Portfolio</h2>
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>
@@ -14,18 +15,18 @@
             </ul>
         </nav>
     </div>
-    <h1>Select an Actor</h1>
+    <h3>Select an Actor</h3>
     <form id="actor_select_form">
         <select id="selected_actor" name="selected_actor">
             {% for a in actors %}
-                <option value="{{ a.act_id }}">{{ a.act_lastname }} {{ a.act_firstname }}</option>
+                <option value="{{ a.act_id }}">{{ a.act_lastname }}, {{ a.act_firstname }}</option>
             {% endfor %}
         </select>
-        <button type="button" id="show_actor">Show Actor Portfolio</button>
+        <button type="button" id="show_actor">Show Portfolio</button>
     </form>
 
     <div id="movie_list">
-        <!-- Cast list will be displayed here -->
+        <!-- Test to build up a list with JavaScript code -->
     </div>
 
     <script>
@@ -44,7 +45,7 @@
 
                         // Display the cast for the selected movie
                         const castHeader = document.createElement('h2');
-                        castHeader.textContent = 'Movie:';
+                        castHeader.textContent = 'Movies:';
                         castListContainer.appendChild(castHeader);
 
                         if (castList.length === 0) {
@@ -55,7 +56,7 @@
                             const ul = document.createElement('ul');
                             castList.forEach(movie => {
                                 const li = document.createElement('li');
-                                li.textContent = movie;
+                                li.textContent = `Title: ${movie.title}, Role: ${movie.role}`;
                                 ul.appendChild(li);
                             });
                             castListContainer.appendChild(ul);

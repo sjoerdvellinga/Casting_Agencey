@@ -1,114 +1,49 @@
 import sys
 
 from flask import Flask, render_template, request, redirect, url_for, jsonify, abort
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import UniqueConstraint, CheckConstraint
-
+from model import db, create_tables, Movie, Actor, Cast
+from model import queryCastByActor, queryMovieByActor
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://vellinga@127.0.0.1:5432/agency_model'
-db = SQLAlchemy(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://vellinga@127.0.0.1:5432/casting_model'
+db.init_app(app)
 migrate = Migrate(app, db)
-app.config['DEBUG'] = True
-
-class Movie(db.Model):
-    """
-    Represents a movie in the database.
-
-    """
-
-    __tablename__ = 'movies'
-    mov_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    mov_title = db.Column(db.String(), nullable=False)
-    mov_year = db.Column(db.String (4), nullable=False)
-    mov_language = db.Column(db.String(2), nullable=True)
-
-    def __repr__(self):
-        return f'<Movie {self.mov_id} {self.mov_title} {self.mov_year} {self.mov_language}>'
-
-class Actor(db.Model):
-    """
-    Represents an actor in the database.
-
-    """
-
-    __tablename__= 'actors'
-    act_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    act_firstname = db.Column(db.String(25), nullable=False)
-    act_lastname = db.Column(db.String(25), nullable=False)
-    act_language = db.Column(db.String(2), nullable=True)
-    act_gender = db.Column(db.String(6), nullable=True)
-
-    def __repr__(self):
-        return f'<Actor {self.act_id} {self.act_firstname} {self.act_lastname} {self.act_language} {self.act_gender}>'
-
-class Cast(db.Model):
-    """
-    Represents amovie cast in the database.
-    The movie cast are the actor who performed in the movie.
-
-    """
-
-    __tablename__ = 'casts'
-    cas_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    mov_id = db.Column(db.Integer, db.ForeignKey('movies.mov_id'), nullable=False)
-    act_id = db.Column(db.Integer, db.ForeignKey('actors.act_id'), nullable=False)
-    cas_role = db.Column(db.String(35), nullable=True)
-
-    # Amake sure the relation is unique, to enable consistant deleting movies.
-    __table_args__ = (UniqueConstraint('mov_id', 'act_id'),)
-
-    movie = db.relationship('Movie', backref=db.backref('casts', lazy=True))
-    actor = db.relationship('Actor', backref=db.backref('casts', lazy=True))
-
-    def __repr__(self):
-        return f'<Cast {self.cas_id} {self.mov_id} {self.act_id} {self.cas_role}>'
+#app.config['DEBUG'] = True
 
 
+# Homepage
+@app.route('/')
+def index():
+    movies = Movie.query.all()
+    actors = Actor.query.all()
+    return render_template('index.html', movies=movies, actors=actors)
 
-def create_tables():
-    with app.app_context():
-        db.create_all()
+#----------------------------------------------------------------------------#
+# Movies
+#----------------------------------------------------------------------------#
 
-# Get all movies where selected actor perfomed in.
-def get_movies_by_actor_id(act_id):
-    try:
-        actor = Actor.query.get(act_id)
-
-        if actor:
-            # Use actor.casts to get the list of movies they have acted in
-            movies = [cast.movie.mov_title for cast in actor.casts]
-            return movies
-        else:
-            return None  # Return None if actor not found
-        
-    except SQLAlchemyError as act_retrieve_error:
-        print(str(act_retrieve_error))
-        return None
-
-
-# Endpoint to add new movies to the database
+# Endpoint to add new movies
 @app.route('/movie/create', methods=['POST'])
 def create_movie():
     body = {}
     try:
         data = request.get_json()
         mov_title = data.get('mov_title')
-        mov_year = data.get('mov_year')
+        mov_release = data.get('mov_release')
         mov_language = data.get('mov_language')
 
-        if not mov_title or not mov_year:
+        if not mov_title or not mov_release:
             return jsonify({"error": "Mandatory value for either movie title or release year is missing."}), 400
 
-        movie = Movie(mov_title=mov_title, mov_year=mov_year, mov_language=mov_language)
+        movie = Movie(mov_title=mov_title, mov_release=mov_release, mov_language=mov_language)
         db.session.add(movie)
         db.session.commit()
 
         body = {
             'mov_title': movie.mov_title,
-            'mov_year': movie.mov_year,
+            'mov_release': movie.mov_release,
             'mov_language': movie.mov_language
         }
         return jsonify(body), 201  # 201 - Movie created status for successful creation
@@ -121,7 +56,60 @@ def create_movie():
     finally:
         db.session.close()
 
+# Endpoint to delete movies
+@app.route('/movies/<int:mov_id>', methods=['DELETE'])
+def delete_movie(mov_id):
+    try:
+        movie = Movie.query.get(mov_id)
 
+        if movie:
+            # Delete associated cast entries
+            Cast.query.filter_by(mov_id=mov_id).delete()
+
+            # Now, delete the movie
+            db.session.delete(movie)
+            db.session.commit()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Movie not found in database'}), 404
+    except SQLAlchemyError as err_mov_del:
+        db.session.rollback()
+        print(str(err_mov_del))
+        return jsonify({"success": False, "error": "Database error"}), 500
+    finally:
+        db.session.close()
+
+# Endpoint to rename movies
+@app.route('/update_movie_title/<int:mov_id>', methods=['POST'])
+def update_movie_title(mov_id):
+    try:
+        new_title = request.json.get('newTitle')
+
+        # Fetch the movie record from the database using movie_id
+        movie = Movie.query.get(mov_id)
+
+        if movie:
+            # Update the movie title
+            movie.mov_title = new_title
+            db.session.commit()
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "error": "Movie not found"})
+
+    except SQLAlchemyError as err_mov_titl:
+        db.session.rollback()
+        print(str(err_mov_titl))
+        return jsonify({"success": False, "error": "Database error"})
+
+    finally:
+        db.session.close()
+
+#----------------------------------------------------------------------------#
+# Actors
+#----------------------------------------------------------------------------#
+
+
+# Endpoint to add new actors
 @app.route('/actor/create', methods=['POST'])
 def create_actor():
     body = {}
@@ -147,58 +135,10 @@ def create_actor():
         }
         return jsonify(body), 201  # 201 - Artis created status for successful creation
 
-    except Exception as e:
+    except Exception as err_act_crt:
         db.session.rollback()
-        print(str(e))
+        print(str(err_act_crt))
         return jsonify({"error": "Invalid request data in Actors"}), 400
-
-    finally:
-        db.session.close()
-
-# Delete movies
-@app.route('/movies/<int:mov_id>', methods=['DELETE'])
-def delete_movie(mov_id):
-    try:
-        movie = Movie.query.get(mov_id)
-
-        if movie:
-            # Delete associated cast entries
-            Cast.query.filter_by(mov_id=mov_id).delete()
-
-            # Now, delete the movie
-            db.session.delete(movie)
-            db.session.commit()
-            return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Movie not found in database'}), 404
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(str(e))
-        return jsonify({"success": False, "error": "Database error"}), 500
-    finally:
-        db.session.close()
-
-# Rename movies
-@app.route('/update_movie_title/<int:mov_id>', methods=['POST'])
-def update_movie_title(mov_id):
-    try:
-        new_title = request.json.get('newTitle')
-
-        # Fetch the movie record from the database using movie_id
-        movie = Movie.query.get(mov_id)
-
-        if movie:
-            # Update the movie title
-            movie.mov_title = new_title
-            db.session.commit()
-            return jsonify({"success": True})
-        else:
-            return jsonify({"success": False, "error": "Movie not found"})
-
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(str(e))
-        return jsonify({"success": False, "error": "Database error"})
 
     finally:
         db.session.close()
@@ -215,52 +155,41 @@ def delete_actor(act_id):
             return jsonify({'success': True})
         else:
             return jsonify({'success': False, 'error': 'Actor was not found in database'}), 404
-    except SQLAlchemyError as e:
+    except SQLAlchemyError as err_act_del:
         db.session.rollback()
-        print(str(e))
+        print(str(err_act_del))
         return jsonify({"success": False, "error": "Database error"}), 500
     finally:
         db.session.close()
 
-@app.route('/')
-def index():
-   movies = Movie.query.all()
-   actors = Actor.query.all()
-   return render_template('index.html', movies=movies, actors=actors)
+# Endpoint to get actor details
+@app.route('/actor')
+def show_actor():
+    actors = Actor.query.all()
+    return render_template('portfolio.html', actors=actors)
 
-# Route to assign actors to movie casts.
-@app.route('/movie/<int:mov_id>/cast/add/<int:act_id>', methods=['POST'])
-def add_actor_to_cast(mov_id, act_id):
-    try:
-        print(f"Received mov_id: {mov_id}, act_id: {act_id}")
-        movie = Movie.query.get(mov_id)
-        actor = Actor.query.get(act_id)
+@app.route('/actor/<int:act_id>/movies')
+def get_actor_portfolio(act_id):
 
-        if movie and actor:
-            # Check if the combination of movie_id and actor_id already exists
-            existing_cast = Cast.query.filter_by(mov_id=mov_id, act_id=act_id).first()
-            if existing_cast:
-                return jsonify({'success': False, 'error': 'Actor is already in the cast'}), 400
+    movies = queryMovieByActor(act_id)
 
-            cast = Cast(movie=movie, actor=actor)
-            db.session.add(cast)
-            db.session.commit()
-            return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'error': 'Movie or actor not found'}), 404
-    except SQLAlchemyError as e:
-        db.session.rollback()
-        print(str(e))
-        return jsonify({"success": False, "error": "Database error"}), 500
-    finally:
-        db.session.close()
+    if movies is not None:
+        return jsonify(success=True, cast_list=movies)
+    else:
+        return jsonify(success=False, message='Failed to retrieve movies')
 
+
+#----------------------------------------------------------------------------#
+# Casts
+#----------------------------------------------------------------------------#
+
+# Endpoint to retrieve movie cast.
 @app.route('/cast')
 def show_cast():
     movies = Movie.query.all()
     return render_template('cast.html', movies=movies)
 
-
+# Endpoint to retrieve movie cast in data dictionairy format.
 @app.route('/movie/<int:mov_id>/cast')
 def get_movie_cast(mov_id):
     try:
@@ -277,28 +206,54 @@ def get_movie_cast(mov_id):
             return jsonify({'success': True, 'cast_list': cast_list})
         else:
             return jsonify({'success': False, 'error': 'Movie not found'}), 404
-    except SQLAlchemyError as e:
+    except SQLAlchemyError as err_mov_cast:
         db.session.rollback()
-        print(str(e))
+        print(str(err_mov_cast))
         return jsonify({"success": False, "error": "Database error"}), 500
     finally:
         db.session.close()
 
-@app.route('/actor')
-def show_actor():
-    actors = Actor.query.all()
-    return render_template('portfolio.html', actors=actors)
+# Endpoint to assign actors to movie casts.
+@app.route('/movie/<int:mov_id>/cast/add/<int:act_id>', methods=['POST'])
+def add_actor_to_cast(mov_id, act_id, cas_role):
+    try:
+        print(f"Received mov_id: {mov_id}, act_id: {act_id}, cas_role: {cas_role}")
+        movie = Movie.query.get(mov_id)
+        actor = Actor.query.get(act_id)
+        role = Cast.query.get(cas_role)
 
-@app.route('/actor/<int:act_id>/movies')
-def get_actor_portfolio(act_id):
+        if movie and actor:
+            # Check if the combination of movie_id and actor_id already exists
+            existing_cast = Cast.query.filter_by(mov_id=mov_id, act_id=act_id).first()
+            if existing_cast:
+                return jsonify({'success': False, 'error': 'Actor is already in this movies cast'}), 400
 
-    movies = get_movies_by_actor_id(act_id)
+            cast = Cast(movie=movie, actor=actor, role=role)
+            db.session.add(cast)
+            db.session.commit()
+            return jsonify({'success': True})
+        else:
+            return jsonify({'success': False, 'error': 'Movie or actor not found'}), 404
+    except SQLAlchemyError as error_assing_act:
+        db.session.rollback()
+        print(str(error_assing_act))
+        return jsonify({"success": False, "error": "Database error"}), 500
+    finally:
+        db.session.close()
 
-    if movies is not None:
-        return jsonify(success=True, cast_list=movies)
+
+# Endpoint to get casts for specific actor
+@app.route('/actor/<int:act_id>/casts')
+def get_actor_casts(act_id):
+
+    casts = queryCastByActor(act_id)
+
+    if casts is not None:
+        return jsonify(success=True, cast_list=casts)
     else:
         return jsonify(success=False, message='Failed to retrieve movies')
 
+# Endpoint to remove actor from a cast
 @app.route('/movie/<int:mov_id>/cast/delete/<int:act_id>', methods=['POST'])
 def delete_actor_from_cast(mov_id, act_id):
     try:
@@ -317,14 +272,51 @@ def delete_actor_from_cast(mov_id, act_id):
                 return jsonify({'success': False, 'message': 'Actor not found in the cast list'}), 404
         else:
             return jsonify({'success': False, 'message': 'Movie or actor not found'}), 404
-    except SQLAlchemyError as e:
+    except SQLAlchemyError as err_cas_act_del:
         db.session.rollback()
-        print(str(e))
+        print(str(err_cas_act_del))
         return jsonify({'success': False, 'message': 'Failed to delete actor from the cast list'}), 500
     finally:
         db.session.close()
 
-#always include this at the bottom of your code
+# Endpoint maintain which actor performed which role in a specific movie.
+@app.route('/cast/create', methods=['POST'])
+def create_cast():
+    try:
+        data = request.form
+        mov_id = data.get('mov_id')
+        act_id = data.get('act_id')
+        cas_role = data.get('cas_role')
+
+        if not mov_id or not act_id or not cas_role:
+            return jsonify({"error": "Please provide all required information."}), 400
+
+        # Check if the combination already exists in the 'casts' table
+        existing_cast = Cast.query.filter_by(mov_id=mov_id, act_id=act_id, cas_role=cas_role).first()
+
+        if existing_cast:
+            return jsonify({"error": "Duplicate entry. Cast already exists."}), 409
+
+        cast = Cast(mov_id=mov_id, act_id=act_id, cas_role=cas_role)
+        db.session.add(cast)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Cast created successfully!"}), 201
+
+    except IntegrityError as err_dt_integ:
+        db.session.rollback()
+        print(str(err_dt_integ))
+        return jsonify({"error": "Failed to create cast due to database integrity error."}), 500
+
+    except Exception as err_cas_crt:
+        db.session.rollback()
+        print(str(err_cas_crt))
+        return jsonify({"error": "Failed to create cast."}), 500
+
+    finally:
+        db.session.close()
+
+# Maintain port
 if __name__ == '__main__':
-   create_tables()  # Initialize the database tables
-   app.run(host="0.0.0.0", port=3000)
+    create_tables()  # Initialize the database tables
+    app.run(host="0.0.0.0", port=3000)

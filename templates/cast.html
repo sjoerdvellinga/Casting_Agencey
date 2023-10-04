@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Movie Cast</title>
+    <title>Casting Agency</title>
 </head>
 <body>
     <div id="header">
-        <h1>The Agency App</h1>
-
+        <h1>The Casting Agency</h1>
+        <h2>Movie Casts</h2>
         <nav>
             <ul>
                 <li><a href="/">Home</a></li>
@@ -16,7 +16,7 @@
         </nav>
     </div>
     
-    <h1>Select a Movie</h1>
+    <h3>Select a Movie</h3>
     <form id="movie_select_form">
         <select id="selected_movie" name="selected_movie">
             {% for m in movies %}
@@ -31,6 +31,11 @@
     </div>
 
     <script>
+        function queryCastForActor(actorId) {
+            return fetch(`/actor/${actorId}/casts`)
+                .then(response => response.json());
+        }
+        
         document.getElementById('show_cast_button').addEventListener('click', () => {
             const selectedMovieId = document.getElementById('selected_movie').value;
 
@@ -56,40 +61,51 @@
                         } else {
                             const table = document.createElement('table');
                             const tableHeaderRow = document.createElement('tr');
-                            const act_idHeaderCell = document.createElement('th');
-                            act_idHeaderCell.textContent = 'ID';
+                            //const act_idHeaderCell = document.createElement('th');
+                            //act_idHeaderCell.textContent = 'ID';
                             const act_firstnameHeaderCell = document.createElement('th');
                             act_firstnameHeaderCell.textContent = 'Firstname';
                             const act_lastnameHeaderCell = document.createElement('th');
                             act_lastnameHeaderCell.textContent = 'Lastname';
+                            const cas_roleHeaderCell = document.createElement('th');
+                            cas_roleHeaderCell.textContent = 'Role';
                             const actionsHeaderCell = document.createElement('th');
                             actionsHeaderCell.textContent = 'Actions';
-                            tableHeaderRow.appendChild(act_idHeaderCell);
+                            //tableHeaderRow.appendChild(act_idHeaderCell);
                             tableHeaderRow.appendChild(act_firstnameHeaderCell);
                             tableHeaderRow.appendChild(act_lastnameHeaderCell);
+                            tableHeaderRow.appendChild(cas_roleHeaderCell);
                             tableHeaderRow.appendChild(actionsHeaderCell);
                             table.appendChild(tableHeaderRow);
                             castList.forEach(actor => {
-                                const propertyNames = Object.keys(actor);
-                                const tableRow = document.createElement('tr');
-                                const act_idCell = document.createElement('td');
-                                act_idCell.textContent = actor.act_id;
-                                const act_lastnameCell = document.createElement('td');
-                                act_lastnameCell.textContent = actor.act_lastname;
-                                const act_firstnameCell = document.createElement('td');
-                                act_firstnameCell.textContent = actor.act_firstname;
-                                const actionsCell = document.createElement('td');
-                                const deleteButton = document.createElement('button');
-                                deleteButton.innerHTML = '&cross;';
-                                deleteButton.addEventListener('click', () => {
-                                    deleteActorFromCast(selectedMovieId, actor.act_id);
-                                });
-                                actionsCell.appendChild(deleteButton);
-                                tableRow.appendChild(act_idCell);
-                                tableRow.appendChild(act_lastnameCell);
-                                tableRow.appendChild(act_firstnameCell);
-                                tableRow.appendChild(actionsCell);
-                                table.appendChild(tableRow);
+                                queryCastForActor(actor.act_id)
+                                    .then(cast => {
+                                        const tableRow = document.createElement('tr');
+                                            //const act_idCell = document.createElement('td');
+                                            //act_idCell.textContent = actor.act_id;
+                                            const act_firstnameCell = document.createElement('td');
+                                            act_firstnameCell.textContent = actor.act_firstname;
+                                            const act_lastnameCell = document.createElement('td');
+                                            act_lastnameCell.textContent = actor.act_lastname;
+                                            const cas_roleCell = document.createElement('td');
+                                            cas_roleCell.textContent = cast.cas_role;
+                                            const actionsCell = document.createElement('td');
+                                            const deleteButton = document.createElement('button');
+                                            deleteButton.innerHTML = 'Remove actor from Cast;';
+                                            deleteButton.addEventListener('click', () => {
+                                                deleteActorFromCast(selectedMovieId, actor.act_id);
+                                            });
+                                        actionsCell.appendChild(deleteButton);
+                                        //tableRow.appendChild(act_idCell);
+                                        tableRow.appendChild(act_firstnameCell);
+                                        tableRow.appendChild(act_lastnameCell);
+                                        tableRow.appendChild(cas_roleCell);
+                                        tableRow.appendChild(actionsCell);
+                                        table.appendChild(tableRow);
+                                    })
+                                    .catch(error => {
+                                        console.error(error);
+                                    });
                             });
                             castListContainer.appendChild(table);
                         }
