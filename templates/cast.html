@@ -42,6 +42,7 @@
             fetch(`/movie/${selectedMovieId}/cast`)
                 .then(response => response.json())
                 .then(data => {
+//                  console.log(data);
                     if (data.success) {
                         const castList = data.cast_list;
                         const castListContainer = document.getElementById('cast_list');
@@ -88,7 +89,7 @@
                                             const act_lastnameCell = document.createElement('td');
                                             act_lastnameCell.textContent = actor.act_lastname;
                                             const cas_roleCell = document.createElement('td');
-                                            cas_roleCell.textContent = cast.cas_role;
+                                            cas_roleCell.textContent = actor.cas_role;
                                             const actionsCell = document.createElement('td');
                                             const deleteButton = document.createElement('button');
                                             deleteButton.innerHTML = 'Remove actor from Cast;';

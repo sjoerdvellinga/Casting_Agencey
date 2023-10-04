@@ -48,9 +48,9 @@ def create_movie():
         }
         return jsonify(body), 201  # 201 - Movie created status for successful creation
 
-    except Exception as e:
+    except Exception as err_mov_crt:
         db.session.rollback()
-        print(str(e))
+        print(str(err_mov_crt))
         return jsonify({"error": "Invalid request data in Movies"}), 400
 
     finally:
@@ -194,22 +194,37 @@ def show_cast():
 def get_movie_cast(mov_id):
     try:
         movie = Movie.query.get(mov_id)
-        if movie:
-            cast_list = []
-            for cast_entry in movie.casts:
-                cast_dict = {
-                    "act_id": cast_entry.actor.act_id,
-                    "act_firstname": cast_entry.actor.act_firstname,
-                    "act_lastname": cast_entry.actor.act_lastname
-                }
-                cast_list.append(cast_dict)        
-            return jsonify({'success': True, 'cast_list': cast_list})
-        else:
+
+        # Check if the movie exists
+        if not movie:
             return jsonify({'success': False, 'error': 'Movie not found'}), 404
+
+        cast_list = []
+
+        for cast_entry in movie.casts:
+            cast_dict = {
+                "act_id": cast_entry.actor.act_id,
+                "act_firstname": cast_entry.actor.act_firstname,
+                "act_lastname": cast_entry.actor.act_lastname,
+            }
+
+            if cast_entry.cas_role is not None:  # Access cas_role directly from cast_entry
+                cast_dict["cas_role"] = cast_entry.cas_role
+
+            cast_list.append(cast_dict)
+
+        return jsonify({'success': True, 'cast_list': cast_list})
+
+    except Exception as e:
+        # Handle other exceptions
+        return jsonify({'success': False, 'error': str(e)})
+
     except SQLAlchemyError as err_mov_cast:
+        # Handle database errors
         db.session.rollback()
         print(str(err_mov_cast))
         return jsonify({"success": False, "error": "Database error"}), 500
+
     finally:
         db.session.close()
 
@@ -217,7 +232,7 @@ def get_movie_cast(mov_id):
 @app.route('/movie/<int:mov_id>/cast/add/<int:act_id>', methods=['POST'])
 def add_actor_to_cast(mov_id, act_id, cas_role):
     try:
-        print(f"Received mov_id: {mov_id}, act_id: {act_id}, cas_role: {cas_role}")
+        #print(f"Received mov_id: {mov_id}, act_id: {act_id}, cas_role: {cas_role}")
         movie = Movie.query.get(mov_id)
         actor = Actor.query.get(act_id)
         role = Cast.query.get(cas_role)
