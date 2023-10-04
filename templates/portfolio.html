@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Actors Portfolio</title>
+</head>
+<body>
+    <div id="header">
+        <h1>The Agency App</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/cast">View Cast</a></li>
+                <li><a href="/actor">View Actor</a></li>
+            </ul>
+        </nav>
+    </div>
+    <h1>Select an Actor</h1>
+    <form id="actor_select_form">
+        <select id="selected_actor" name="selected_actor">
+            {% for a in actors %}
+                <option value="{{ a.act_id }}">{{ a.act_lastname }} {{ a.act_firstname }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" id="show_actor">Show Actor Portfolio</button>
+    </form>
+
+    <div id="movie_list">
+        <!-- Cast list will be displayed here -->
+    </div>
+
+    <script>
+        document.getElementById('show_actor').addEventListener('click', () => {
+            const selectedActorId = document.getElementById('selected_actor').value;
+
+            fetch(`/actor/${selectedActorId}/movies`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const castList = data.cast_list;
+                        const castListContainer = document.getElementById('movie_list');
+
+                        // Clear previous cast list
+                        castListContainer.innerHTML = '';
+
+                        // Display the cast for the selected movie
+                        const castHeader = document.createElement('h2');
+                        castHeader.textContent = 'Movie:';
+                        castListContainer.appendChild(castHeader);
+
+                        if (castList.length === 0) {
+                            const noCastMessage = document.createElement('p');
+                            noCastMessage.textContent = 'No movies for this actor.';
+                            castListContainer.appendChild(noCastMessage);
+                        } else {
+                            const ul = document.createElement('ul');
+                            castList.forEach(movie => {
+                                const li = document.createElement('li');
+                                li.textContent = movie;
+                                ul.appendChild(li);
+                            });
+                            castListContainer.appendChild(ul);
+                        }
+                    } else {
+                        alert('Failed to retrieve movies.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        });
+    </script>
+</body>
+</html>

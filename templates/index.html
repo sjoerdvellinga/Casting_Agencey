@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>The Agency App</title>
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>The Agency App</h1>
+        <a href="/login">Login with Auth0</a>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/cast">View Cast</a></li>
+                <li><a href="/actor">View Actor</a></li>
+            </ul>
+        </nav>
+    </div>
+<form id="movie_form">
+    <input type="text" id="mov_title" name="Mov_title" placeholder="Title"/>
+    <input type="text" id="mov_year" name="Mov_year" placeholder="Release year"/>
+    <input type="text" id="mov_language" name="Mov_language" placeholder="Language"/>
+    <input type="submit" name="createMovie" value="createMovie"/>
+</form>
+<div id="mov_error" class="hidden">That did not go as expected! The movie was not added.</div>
+
+<div id="cast_form" class="hidden">
+    <input type="hidden" id="selected_mov_id" name="selected_mov_id" value="">
+    <select id="mov_id" name="mov_id" value="">
+        {% for m in movies %}
+            <option value="{{ m.mov_id }}">{{ m.mov_title }} {{ m.mov_year }}</option>
+        {% endfor %}
+    </select>
+    <select id="act_id" name="act_id">
+        {% for a in actors %}
+            <option value="{{ a.act_id }}">{{ a.act_lastname }} {{ a.act_firstname }}</option>
+        {% endfor %}
+    </select>
+    <button type="button" id="add_actor_to_cast">Add Actor to Cast</button>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Year</th>
+            <th>Language</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="movie_list">
+        {% for m in movies %}
+        <tr>
+            <td><span class="editable" data-movie-id="{{ m.mov_id }}">{{ m.mov_title }}</span></td>
+            <td>{{ m.mov_year }}</td>
+            <td>{{ m.mov_language }}</td>
+            <td>
+                <button class="edit_cast" data-mov-id="{{ m.mov_id }}">Edit Cast</button>
+                <button class="mov_delete" data-mov-id="{{ m.mov_id }}">&cross;</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<form id="actor_form">
+    <input type="text" id="act_firstname" name="act_firstname" placeholder="Actor's Fistname"/>
+    <input type="text" id="act_lastname" name="act_lastname" placeholder="Actor's Lastname"/>
+    <input type="text" id="act_language" name="act_language" placeholder="Actor's native language"/>
+    <input type="text" id="act_gender" name="act_gender" placeholder="Gender"/>
+    <input type="submit" name="createActor" value="createActor"/>
+</form>
+<div id="act_error" class="hidden">That did not go as expected! The actor is not saved.</div>
+<table>
+    <thead>
+        <tr>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Language</th>
+            <th>Gender</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="actor_list">
+        {% for a in actors %}
+        <tr>
+            <td>{{ a.act_firstname }}</td>
+            <td>{{ a.act_lastname }}</td>
+            <td>{{ a.act_language }}</td>
+            <td>{{ a.act_gender }}</td>
+            <td><button class="act_delete" data-act-id="{{ a.act_id }}">&cross;</button></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>    //Submit new movies and retrieve movie data
+    document.getElementById('movie_form').onsubmit = function(e) {
+        e.preventDefault();
+        fetch('/movie/create', {
+            method: 'POST',
+            body: JSON.stringify({
+                'mov_title': document.getElementById('mov_title').value,
+                'mov_year': document.getElementById('mov_year').value,
+                'mov_language': document.getElementById('mov_language').value
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(jsonResponse) {
+            console.log(jsonResponse);
+            if (jsonResponse.error) {
+                // Handle the error here, if any
+                document.getElementById('mov_error').className = '';
+            } else {
+                // Create a new row for the movie and add it to the table
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td><span class="editable" data-movie-id="${jsonResponse['mov_id']}">${jsonResponse['mov_title']}</span></td>
+                    <td>${jsonResponse['mov_year']}</td>
+                    <td>${jsonResponse['mov_language']}</td>
+                `;
+                document.querySelector('tbody').appendChild(newRow);
+                document.getElementById('mov_error').className = 'hidden';
+
+                // Clear the input fields after successful submission
+                document.getElementById('mov_title').value = '';
+                document.getElementById('mov_year').value = '';
+                document.getElementById('mov_language').value = '';
+            }
+        })
+        .catch(function(error) {  
+            console.error('Error:', error);
+            document.getElementById('mov_error').className = '';
+        });
+    }
+</script>
+
+<script>    // Submit new actors and retrieve actor data records
+    document.getElementById('actor_form').onsubmit = function(e) {
+        e.preventDefault();
+        fetch('/actor/create', {
+            method: 'POST',
+            body: JSON.stringify({
+                'act_firstname': document.getElementById('act_firstname').value,
+                'act_lastname': document.getElementById('act_lastname').value,
+                'act_language': document.getElementById('act_language').value,
+                'act_gender': document.getElementById('act_gender').value
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(jsonResponse) {
+            console.log(jsonResponse);
+            if (jsonResponse.error) {
+                // Handle the error here, if any
+                document.getElementById('act_error').className = '';
+            } else {
+                // Create a new row for the actor and add it to the table
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td><span class="editable" data-actor-id="${jsonResponse['act_id']}">${jsonResponse['act_firstname']}</span></td>
+                    <td>${jsonResponse['act_lastname']}</td>
+                    <td>${jsonResponse['act_language']}</td>
+                    <td>${jsonResponse['act_gender']}</td>
+                `;
+                document.querySelector('tbody#actor_list').appendChild(newRow);
+                document.getElementById('act_error').className = 'hidden';
+
+                // Clear the input fields after successful submission
+                document.getElementById('act_firstname').value = '';
+                document.getElementById('act_lastname').value = '';
+                document.getElementById('act_language').value = '';
+                document.getElementById('act_gender').value = '';
+            }
+        })
+        .catch(function(error) {  
+            console.error('Error:', error);
+            document.getElementById('act_error').className = '';
+        });
+    }
+</script>
+
+
+<script>    // Make the Movie title field editable, confirm with <ENTER>
+    const editableElements = document.querySelectorAll('.editable');
+
+    // Function to make the title editable
+    function makeTitleEditable(element) {
+        element.contentEditable = true;
+        element.style.border = '1px solid #ccc';
+        element.style.padding = '5px';
+        element.focus();
+    }
+
+    
+    // Add event listeners to make the titles editable
+    editableElements.forEach(element => {
+        element.addEventListener('click', () => {
+            makeTitleEditable(element);
+        });
+
+    element.addEventListener('keydown', (event) => {
+        // Check if the key pressed is Enter (replaced keycode 13 with event.key ENTER -> testing)
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            element.contentEditable = false;
+            element.style.border = 'none';
+            element.style.padding = '0';
+            const movieId = element.getAttribute('data-movie-id');
+            const newTitle = element.textContent;
+
+            // Send a request to update the movie title in the backend (Flask)
+            fetch(`/update_movie_title/${movieId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ newTitle }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        alert('Failed to update the movie title.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    });
+});
+</script>
+
+<script>    // Delete movies from the list
+    const deletableMovieElements = document.querySelectorAll('.mov_delete');
+    deletableMovieElements.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const mov_id = e.target.getAttribute('data-mov-id');
+            fetch(`/movies/${mov_id}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    // If the delete request was successful, remove the row from the table
+                    const row = e.target.closest('tr');
+                    row.remove();
+                } else {
+                    console.error('Failed to delete movie.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+</script>
+
+<script>    // Delete actors from the list
+    const deletableActorElements = document.querySelectorAll('.act_delete');
+    deletableActorElements.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const act_id = e.target.getAttribute('data-act-id');
+            fetch(`/actor/${act_id}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    // If the delete request was successful, remove the row from the table
+                    const row = e.target.closest('tr');
+                    row.remove();
+                } else {
+                    console.error('Failed to delete actor.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+</script>
+
+<script>    // Edit cast (Assign actors to movies)
+    document.querySelectorAll('.edit_cast').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const movieId = e.target.getAttribute('data-mov-id');
+            document.getElementById('selected_mov_id').value = movieId;
+            document.getElementById('mov_id').value = movieId; // Optionally, you can select the movie in the dropdown
+            document.getElementById('cast_form').classList.remove('hidden');
+        });
+    });
+
+    document.getElementById('add_actor_to_cast').addEventListener('click', () => {
+        const mov_id = document.getElementById('mov_id').value;
+        const act_id = document.getElementById('act_id').value;
+
+        fetch(`/movie/${mov_id}/cast/add/${act_id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Add the actor to the cast list for the movie
+                const actor = document.querySelector(`option[value="${actorId}"]`).textContent;
+                const castList = document.querySelector(`#cast_list_${movieId}`);
+                const newItem = document.createElement('li');
+                newItem.textContent = actor;
+                castList.appendChild(newItem);
+            } else {
+                alert('Failed to add actor to cast.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+</script>
+
+</body>
+</html>
