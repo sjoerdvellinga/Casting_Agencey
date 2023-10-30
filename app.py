@@ -254,7 +254,7 @@ def create_app(test_config=None):
                 db.session.commit()
                 return jsonify({'success': True})
             else:
-                return jsonify({'success': False, 'error': 'Actor was not found in database'}), 404
+                return jsonify({'success': False, 'error': 'Actor not found'}), 404
         except SQLAlchemyError as err_act_del:
             db.session.rollback()
             print(str(err_act_del))
