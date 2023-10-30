@@ -222,7 +222,20 @@ $ curl http://127.0.0.1:5000/NotValid
 
 Other returned error codes:
 
-400: Bad request
+400: Invalid input data
+    -> Actor already in this movie's cast
+    -> Invalid request data in actor
+    -> Invalid request data in movie
 404: Resource not found
+    -> Movie not found
+    -> Actor not found
+    -> Movie or actor not found
+    -> Cast not found
 405: Method not allowed
+409: Duplicate entry. Cast already exists.
 422: Unprocessable
+500: Failed to create cast
+    -> Database error
+    -> Failed to delete actor from the cast list
+    -> Failed to create cast due to database integrity error
+    -> Failed to create cast
