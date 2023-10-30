@@ -291,7 +291,7 @@ def create_app(test_config=None):
                 # Check if the combination of movie_id and actor_id already exists
                 existing_cast = Cast.query.filter_by(mov_id=mov_id, act_id=act_id).first()
                 if existing_cast:
-                    return jsonify({'success': False, 'error': 'Actor is already in this movies cast'}), 400
+                    return jsonify({'success': False, 'error': "Actor is already in this movie's cast"}), 400
 
                 cast = Cast(movie=movie, actor=actor, role=role)
                 db.session.add(cast)
@@ -447,6 +447,16 @@ def create_app(test_config=None):
 
         finally:
             db.session.close()
+
+    # Error handling for invalid requests
+    @app.route('/NotValid', methods=['GET'])
+    def not_valid():
+        response = {
+            "error": 404,
+            "message": "resource not found",
+            "success": False
+        }
+        return jsonify(response), 404
     
     # Error Handler for Authentication
     @app.errorhandler(AuthError)
