@@ -13,7 +13,7 @@ class Movie(db.Model):
     __tablename__ = 'movies'
     mov_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     mov_title = db.Column(db.String(30), nullable=False)
-    mov_release = db.Column(db.Integer, CheckConstraint('mov_release_year >= 1920 AND mov_release_year <= 2030'), nullable=True)
+    mov_release = db.Column(db.Integer, CheckConstraint('mov_release >= 1920 AND mov_release <= 2030'), nullable=True)
     mov_language = db.Column(db.String(2), nullable=True)
 
     __table_args__ = (UniqueConstraint('mov_id', 'mov_title', 'mov_release'),)

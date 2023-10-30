@@ -21,6 +21,16 @@
                 </ul>
             </nav>
         </div>
+        <div>
+            {% if session %}
+                <h2>Welcome {{session.userinfo.nickname}}!</h2>
+                <p><a href="/logout">Logout</a></p>
+                <div><pre>{{pretty}}</pre></div>
+            {% else %}
+                <h1>Welcome Guest</h1>
+                <p><a href="/login">Login</a></p>
+            {% endif %}
+        </div>
         <form id="movie_form">
             <h3>New Movies</h3>
             <input type="text" id="mov_title" name="Mov_title" placeholder="Title"/>
