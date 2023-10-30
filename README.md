@@ -5,27 +5,26 @@ Flask application to adminstrate for The Casting Agency, which movies produced, 
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
+- [Getting Started](#getting_Started)
+  - [Installing Dependencies](#Installing_Dependencies)
+  - [PIP_Dependencies](#PIP_Dependencies)
+  - [Key_Dependencies](#Key_Dependencies)
+  - [Running_the_server](#Running_the_server)
 - [Endpoints](#endpoints)
+- [Error_Handling](#Error_Handling)
 - [Authentication](#authentication)
-- [Contributing](#contributing)
-- [License](#license)
 
-## Getting Started
-### Installing Dependencies
+## Getting_Started
+### Installing_Dependencies
 Python 3.7
 Follow instructions to install the latest version of python for your platform in the python docs
 
-### PIP Dependencies
+### PIP_Dependencies
 Once you have your virtual environment setup and running, install dependencies by naviging to the /backend directory and running:
 pip install -r requirements.txt
 This will install all of the required packages we selected within the requirements.txt file.
 
-### Key Dependencies
+### Key_Dependencies
 Flask 
 is a lightweight backend microservices framework. Flask is required to handle requests and responses.
 
@@ -35,9 +34,7 @@ are libraries to handle the lightweight sqlite database. Since we want you to fo
 jose 
 JavaScript Object Signing and Encryption for JWTs. Useful for encoding, decoding, and verifying JWTS.
 
-### Running the server
-From within the ./src directory first ensure you are working using your created virtual environment.
-
+### Running_the_server
 Each time you open a new terminal session, run:
 $ export FLASK_APP=api.py;
 
@@ -208,7 +205,7 @@ RESPONSE:
     }
 
 
-## Error handeling
+## Error_Handling
 
 Errors are returned as JSON objects:
 
@@ -239,3 +236,44 @@ Other returned error codes:
     -> Failed to delete actor from the cast list
     -> Failed to create cast due to database integrity error
     -> Failed to create cast
+
+## Authentication
+User need to register in Auth0. An admin will assign the relevant role to the user in Auth0.
+
+Logon link: <<to be maintained after deploying app on Heroku>>
+
+Roles: 
+1. Executive Producer
+  "permissions": [
+        "delete:actor",
+        "delete:movie",
+        "post:actor",
+        "post:actor-cast",
+        "post:cast",
+        "post:movie",
+        "read:actor_portfolio",
+        "read:actors",
+        "read:cast",
+        "read:movies",
+        "update:movie"
+    ]
+2. Casting Director
+"permissions": [
+        "post:actor-cast",
+        "post:cast",
+        "read:actor_portfolio",
+        "read:actors",
+        "read:cast",
+        "read:movies",
+        "update:movie"
+    ]
+3. Casting Assistent
+    "permissions": [
+        "read:actors",
+        "read:cast",
+    ]
+
+For Testing via website, 3 test users are provided:
+1. Executive@tacture.com (Uda^Executive)
+2. Director@tacture.com (Uda^Director)
+3. Assistent@tacture.com (Uda^Assistent)
