@@ -120,16 +120,14 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+#.env
 .venv
-env/
+#env/
 venv/
 ENV/
 env.bak/
 venv.bak/
 .myenv
-.agency
-/agency
 
 # Spyder project settings
 .spyderproject
@@ -156,7 +154,7 @@ dmypy.json
 cython_debug/
 
 # Database migrations
-migrations/
+#migrations/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
