@@ -22,6 +22,7 @@ from model import queryCastByActor, queryMovieByActor
 
 from auth import AuthError, requires_auth
 
+
 #----------------------------------------------------------------------------#
 # Auth0 test
 #----------------------------------------------------------------------------#
@@ -29,6 +30,7 @@ from auth import AuthError, requires_auth
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__)
+
     app.secret_key = env.get("APP_SECRET_KEY")
 
     if test_config:
@@ -472,7 +474,8 @@ def create_app(test_config=None):
 
 app = create_app()
 
-# Maintain port
+# Deployment
+# This block of code will only run if app.py is executed directly
 if __name__ == '__main__':
-    create_tables()  # Initialize the database tables
-    app.run(host="0.0.0.0", port=3000)
+    create_tables()
+    app.run(host="0.0.0.0", port=5000)
